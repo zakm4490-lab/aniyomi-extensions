@@ -38,29 +38,36 @@ jobs:
     - name: Build extensions
       run: ./gradlew assembleRelease
 
-    - name: Generate Valid Repo Index & Copy APKs
+    - name: Generate Valid Aniyomi Repo Index
       run: |
         mkdir -p repo
-        
-        # Find all built release APKs
-        # (Using a standard debug/release template sign approach or copying them over)
         find . -name "*.apk" -exec cp {} repo/ \;
         
         cd repo
-        # Generate standard Aniyomi-compatible index.json format
         node -e '
           const fs = require("fs");
           const apks = fs.readdirSync(".").filter(f => f.endsWith(".apk"));
-          const index = apks.map(apk => ({
-            name: apk.replace(/-release-unsigned\.apk$/, "").replace(/-release\.apk$/, ""),
-            pkg: "eu.kanade.tachiyomi.extension." + apk.split("-")[0],
-            apk: apk,
-            version: "1.0.0",
-            versionCode: 1,
-            libVersion: "1.4",
-            lang: "ar",
-            nsfw: 0
-          }));
+          const index = apks.map(apk => {
+            const cleanName = apk.replace(/-release-unsigned\.apk$/, "").replace(/-release\.apk$/, "");
+            return {
+              name: cleanName,
+              pkg: "eu.kanade.tachiyomi.extension.ar." + cleanName,
+              apk: apk,
+              version: "1.0.0",
+              code: 1,
+              libVersion: "1.4",
+              lang: "ar",
+              nsfw: 0,
+              sources: [
+                {
+                  name: cleanName,
+                  lang: "ar",
+                  id: "1",
+                  baseUrl: ""
+                }
+              ]
+            };
+          });
           fs.writeFileSync("index.min.json", JSON.stringify(index, null, 2));
         '
         cd ..
