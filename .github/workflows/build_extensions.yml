@@ -30,18 +30,47 @@ jobs:
           if [ -d "$dir" ]; then
             mkdir -p "$dir/src/main"
             if [ ! -f "$dir/src/main/AndroidManifest.xml" ]; then
-              echo "Creating missing manifest for $dir"
               echo '<?xml version="1.0" encoding="utf-8"?><manifest />' > "$dir/src/main/AndroidManifest.xml"
             fi
           fi
         done
 
     - name: Build extensions
-      run: ./gradlew assemble
+      run: ./gradlew assembleRelease
 
-    - name: Upload APKs
-      uses: actions/upload-artifact@v4
+    - name: Set up Node.js (for repo index generation)
+      uses: actions/setup-node@v4
       with:
-        name: extension-apks
-        path: '**/*.apk'
-        if-no-files-found: ignore
+        node-version: 18
+
+    - name: Generate Extension Index
+      run: |
+        mkdir -p repo
+        # Copy built APKs into the repo folder structure
+        find . -name "*.apk" -exec cp {} repo/ \;
+        
+        # Create a basic index.min.json for Aniyomi to read
+        node -e '
+          const fs = require("fs");
+          const path = require("path");
+          const repoDir = "repo";
+          const apks = fs.readdirSync(repoDir).filter(f => f.endsWith(".apk"));
+          const index = apks.map(apk => ({
+            name: apk,
+            package: apk.replace(/-[0-9.].*$/, ""),
+            version: "1.0.0",
+            code: 1,
+            libVersion: "1.4",
+            url: apk,
+            lang: "ar",
+            nsfw: 0
+          }));
+          fs.writeFileSync(path.join(repoDir, "index.min.json"), JSON.stringify(index));
+        '
+
+    - name: Deploy to Repo Branch
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: repo
+        publish_dir: ./repo
