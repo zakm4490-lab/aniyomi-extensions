@@ -38,20 +38,33 @@ jobs:
     - name: Build extensions
       run: ./gradlew assembleRelease
 
-    - name: Generate Valid Aniyomi Repo Index
+    - name: Sign APKs and Generate Valid Repo Index
       run: |
         mkdir -p repo
-        find . -name "*.apk" -exec cp {} repo/ \;
         
+        # Generate a temporary debug keystore for signing
+        keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -passin pass:android -passout pass:android -dname "CN=Android Debug,O=Android,C=US"
+
+        # Copy and sign every built APK so Aniyomi accepts them
+        for apk in $(find . -name "*-unsigned.apk"); do
+          signed_apk=$(echo "$apk" | sed 's/-unsigned\.apk/\.apk/')
+          # Build standard clean filename
+          filename=$(basename "$signed_apk")
+          
+          # Sign using apksigner / jarsigner
+          jarsigner -keystore debug.keystore -storepass android -keypass android "$apk" androiddebugkey
+          cp "$apk" "repo/$filename"
+        done
+
         cd repo
         node -e '
           const fs = require("fs");
-          const apks = fs.readdirSync(".").filter(f => f.endsWith(".apk"));
+          const apks = fs.readdirSync(".").filter(f => f.endsWith(".apk") && !f.endsWith("-unsigned.apk"));
           const index = apks.map(apk => {
-            const cleanName = apk.replace(/-release-unsigned\.apk$/, "").replace(/-release\.apk$/, "");
+            const base = apk.replace(/-release\.apk$/, "");
             return {
-              name: cleanName,
-              pkg: "eu.kanade.tachiyomi.extension.ar." + cleanName,
+              name: base,
+              pkg: "eu.kanade.tachiyomi.extension.ar." + base,
               apk: apk,
               version: "1.0.0",
               code: 1,
@@ -60,7 +73,7 @@ jobs:
               nsfw: 0,
               sources: [
                 {
-                  name: cleanName,
+                  name: base,
                   lang: "ar",
                   id: "1",
                   baseUrl: ""
