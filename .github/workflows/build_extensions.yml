@@ -25,7 +25,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build extensions
-      run: ./gradlew peroxide
+      run: ./gradlew assembleDebug
 
     - name: Upload APKs
       uses: actions/upload-artifact@v4
