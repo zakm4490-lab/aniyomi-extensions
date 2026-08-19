@@ -24,12 +24,15 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Generate missing manifests automatically
+    - name: Auto-generate missing AndroidManifest files
       run: |
-        find src -type d -path "*/src/main" | while read dir; do
-          if [ ! -f "$dir/AndroidManifest.xml" ]; then
-            echo "Creating missing manifest in $dir"
-            echo '<manifest />' > "$dir/AndroidManifest.xml"
+        for dir in src/*/*; do
+          if [ -d "$dir" ]; then
+            mkdir -p "$dir/src/main"
+            if [ ! -f "$dir/src/main/AndroidManifest.xml" ]; then
+              echo "Creating missing manifest for $dir"
+              echo '<?xml version="1.0" encoding="utf-8"?><manifest />' > "$dir/src/main/AndroidManifest.xml"
+            fi
           fi
         done
 
