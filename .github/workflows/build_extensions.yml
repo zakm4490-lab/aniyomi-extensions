@@ -1,4 +1,4 @@
-name: CI Build
+name: Build Extensions
 
 on:
   push:
@@ -25,10 +25,11 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build extensions
-      run: ./gradlew assembleRelease
+      run: ./gradlew peroxide
 
     - name: Upload APKs
       uses: actions/upload-artifact@v4
       with:
-        name: compiled-extension-apks
+        name: extension-apks
         path: '**/*.apk'
+        if-no-files-found: ignore
