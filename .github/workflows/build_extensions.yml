@@ -38,35 +38,32 @@ jobs:
     - name: Build extensions
       run: ./gradlew assembleRelease
 
-    - name: Set up Node.js (for repo index generation)
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
-
-    - name: Generate Extension Index
+    - name: Generate Valid Repo Index & Copy APKs
       run: |
         mkdir -p repo
-        # Copy built APKs into the repo folder structure
+        
+        # Find all built release APKs
+        # (Using a standard debug/release template sign approach or copying them over)
         find . -name "*.apk" -exec cp {} repo/ \;
         
-        # Create a basic index.min.json for Aniyomi to read
+        cd repo
+        # Generate standard Aniyomi-compatible index.json format
         node -e '
           const fs = require("fs");
-          const path = require("path");
-          const repoDir = "repo";
-          const apks = fs.readdirSync(repoDir).filter(f => f.endsWith(".apk"));
+          const apks = fs.readdirSync(".").filter(f => f.endsWith(".apk"));
           const index = apks.map(apk => ({
-            name: apk,
-            package: apk.replace(/-[0-9.].*$/, ""),
+            name: apk.replace(/-release-unsigned\.apk$/, "").replace(/-release\.apk$/, ""),
+            pkg: "eu.kanade.tachiyomi.extension." + apk.split("-")[0],
+            apk: apk,
             version: "1.0.0",
-            code: 1,
+            versionCode: 1,
             libVersion: "1.4",
-            url: apk,
             lang: "ar",
             nsfw: 0
           }));
-          fs.writeFileSync(path.join(repoDir, "index.min.json"), JSON.stringify(index));
+          fs.writeFileSync("index.min.json", JSON.stringify(index, null, 2));
         '
+        cd ..
 
     - name: Deploy to Repo Branch
       uses: peaceiris/actions-gh-pages@v3
