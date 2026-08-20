@@ -38,14 +38,12 @@ jobs:
     - name: Build extensions
       run: ./gradlew assembleRelease
 
-    - name: Sign APKs and Generate Valid Repo Index
+    - name: Sign APKs and Generate Strict Aniyomi-Compatible Index
       run: |
         mkdir -p repo
         
-        # Generate a temporary debug keystore cleanly
         keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
 
-        # Copy and sign every built APK so Aniyomi accepts them
         for apk in $(find . -name "*-unsigned.apk"); do
           signed_apk=$(echo "$apk" | sed 's/-unsigned\.apk/\.apk/')
           filename=$(basename "$signed_apk")
@@ -58,23 +56,25 @@ jobs:
         node -e '
           const fs = require("fs");
           const apks = fs.readdirSync(".").filter(f => f.endsWith(".apk") && !f.endsWith("-unsigned.apk"));
-          const index = apks.map(apk => {
+          const index = apks.map((apk, index) => {
             const base = apk.replace(/-release\.apk$/, "");
             return {
-              name: base,
+              name: "Extension: " + base,
               pkg: "eu.kanade.tachiyomi.extension.ar." + base,
               apk: apk,
               version: "1.0.0",
-              code: 1,
+              versionCode: 1,
               libVersion: "1.4",
               lang: "ar",
               nsfw: 0,
+              hasReadme: 0,
+              hasChangelog: 0,
               sources: [
                 {
+                  id: String(index + 1),
                   name: base,
                   lang: "ar",
-                  id: "1",
-                  baseUrl: ""
+                  baseUrl: "https://example.com"
                 }
               ]
             };
