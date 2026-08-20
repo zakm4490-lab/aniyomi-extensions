@@ -33,8 +33,7 @@ jobs:
           import subprocess
           from pathlib import Path
 
-          repo = Path("repo")
-          repo.mkdir(parents=True, exist_ok=True)
+          repo = Path(".")
           entries = []
 
           aapt = (
@@ -44,7 +43,7 @@ jobs:
               / "aapt"
           )
 
-          for apk in sorted(repo.glob("*.apk")):
+          for apk in sorted(repo.glob("*-release.apk")):
               result = subprocess.run(
                   [str(aapt), "dump", "badging", str(apk)],
                   capture_output=True,
@@ -63,18 +62,25 @@ jobs:
               if "application-label:'" in data:
                   name = data.split("application-label:'")[1].split("'")[0]
               else:
-                  name = apk.stem
+                  name = apk.stem.replace("-release", "")
 
               entries.append({
                   "name": name,
                   "pkg": package,
                   "apk": apk.name,
                   "version": version,
-                  "versionCode": version_code,
+                  "code": version_code,
                   "libVersion": "1.6",
-                  "lang": "en",
+                  "lang": "ar",
                   "nsfw": 0,
-                  "sources": []
+                  "sources": [
+                      {
+                          "name": name,
+                          "lang": "ar",
+                          "id": 0,
+                          "baseUrl": ""
+                      }
+                  ]
               })
 
           with open(repo / "index.min.json", "w", encoding="utf-8") as file:
