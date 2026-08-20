@@ -42,16 +42,14 @@ jobs:
       run: |
         mkdir -p repo
         
-        # Generate a temporary debug keystore for signing
-        keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -passin pass:android -passout pass:android -dname "CN=Android Debug,O=Android,C=US"
+        # Generate a temporary debug keystore cleanly
+        keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
 
         # Copy and sign every built APK so Aniyomi accepts them
         for apk in $(find . -name "*-unsigned.apk"); do
           signed_apk=$(echo "$apk" | sed 's/-unsigned\.apk/\.apk/')
-          # Build standard clean filename
           filename=$(basename "$signed_apk")
           
-          # Sign using apksigner / jarsigner
           jarsigner -keystore debug.keystore -storepass android -keypass android "$apk" androiddebugkey
           cp "$apk" "repo/$filename"
         done
