@@ -25,15 +25,20 @@ jobs:
       - name: Install Android build-tools
         run: sdkmanager "build-tools;35.0.0"
 
-      - name: Generate index.min.json
+      - name: Generate index.min.json and organize repo
         run: |
+          mkdir -p repo
           cat << 'EOF' > generate.py
           import json
           import os
           import subprocess
           from pathlib import Path
+          import shutil
 
-          repo = Path(".")
+          root = Path(".")
+          repo_dir = root / "repo"
+          repo_dir.mkdir(parents=True, exist_ok=True)
+          
           entries = []
 
           aapt = (
@@ -43,7 +48,9 @@ jobs:
               / "aapt"
           )
 
-          for apk in sorted(repo.glob("*-release.apk")):
+          for apk in sorted(root.glob("*-release.apk")):
+              shutil.copy(apk, repo_dir / apk.name)
+
               result = subprocess.run(
                   [str(aapt), "dump", "badging", str(apk)],
                   capture_output=True,
@@ -83,7 +90,7 @@ jobs:
                   ]
               })
 
-          with open(repo / "index.min.json", "w", encoding="utf-8") as file:
+          with open(repo_dir / "index.min.json", "w", encoding="utf-8") as file:
               json.dump(
                   entries,
                   file,
@@ -91,8 +98,16 @@ jobs:
                   separators=(",", ":")
               )
 
-          print("Generated index.min.json")
+          print("Generated index.min.json in repo/")
           print("Extensions:", len(entries))
           EOF
 
           python3 generate.py
+
+      - name: Commit built repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add repo/
+          git commit -m "Build extension index and APKs [skip ci]" || exit 0
+          git push
