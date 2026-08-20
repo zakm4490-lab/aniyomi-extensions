@@ -77,7 +77,7 @@ jobs:
                       {
                           "name": name,
                           "lang": "ar",
-                          "id": 0,
+                          "id": "1",
                           "baseUrl": ""
                       }
                   ]
